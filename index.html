@@ -1207,45 +1207,31 @@
 
     const ToBeJourney = ({ onBack }) => {
       const [step, setStep] = useState(0);
-
-      // naming state (supports twins)
-      const [babyNames, setBabyNames] = useState([
-        { en: "", ar: "" },
-        { en: "", ar: "" }
-      ]);
-      const [isTwin, setIsTwin] = useState(false);
-      const [activeBabyIndex, setActiveBabyIndex] = useState(0);
-
-      const [aiPrompt, setAiPrompt] = useState("");
+      const [hasTwins, setHasTwins] = useState(false);
+      const [name1En, setName1En] = useState("");
+      const [name1Ar, setName1Ar] = useState("");
+      const [name2En, setName2En] = useState("");
+      const [name2Ar, setName2Ar] = useState("");
       const [aiSuggestions, setAiSuggestions] = useState([]);
       const [aiGender, setAiGender] = useState("boy");
       const [aiLetter, setAiLetter] = useState("Z");
-
-      // add‑on fees
       const [addMofa, setAddMofa] = useState(false);
       const [addForeignAttest, setAddForeignAttest] = useState(false);
       const [foreignCountry, setForeignCountry] = useState("");
-
       const [showReconcile, setShowReconcile] = useState(false);
       const [reconcileState, setReconcileState] = useState("idle"); // idle | done
+      const [photoStatus, setPhotoStatus] = useState("hospital"); // hospital | uploaded
+      const [showPhotoUpload, setShowPhotoUpload] = useState(false);
 
-      const updateBabyName = (index, field, value) => {
-        setBabyNames((prev) => {
-          const next = [...prev];
-          next[index] = { ...next[index], [field]: value };
-          return next;
-        });
-      };
-
-      const isNameConfirmed =
-        babyNames[0].en &&
-        babyNames[0].ar &&
-        (!isTwin || (babyNames[1].en && babyNames[1].ar));
+      const primaryFilled = name1En && name1Ar;
+      const twinsFilled = !hasTwins || (name2En && name2Ar);
+      const isNameConfirmed = primaryFilled && twinsFilled;
 
       const nextStep = () => setStep((s) => Math.min(5, s + 1));
 
       const generateNames = () => {
-        const list = NAME_SUGGESTIONS[aiGender][aiLetter] || [];
+        const list =
+          NAME_SUGGESTIONS[aiGender][aiLetter] || [];
         setAiSuggestions(list);
       };
 
@@ -1354,276 +1340,233 @@
         );
       }
 
-      // Step 2 – smart naming with AI (new layout + twins)
+      // Step 2 – smart naming with AI (with twins option)
       if (step === 2) {
         return (
           <Frame>
             <Card className="p-6 animate-fade-in">
               <h1 className="text-xl font-bold mb-2">
-                Step 2 · Name your baby
+                Step 2 · Name your baby (or babies)
               </h1>
               <p className="text-sm text-slate-600 mb-4">
-                Parents can name one or two babies and use AI inspiration, with ICP
-                validation before they move on.
+                AI suggests culturally appropriate names with meanings, and the system
+                validates Arabic and English spelling against ICP rules before you continue.
               </p>
 
               <div className="space-y-6">
-                {/* AI inspiration block */}
-                <div className="space-y-3">
-                  <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Lucide.Sparkles className="w-4 h-4 text-purple-600" />
-                        <span className="text-xs font-semibold text-purple-700">
-                          Need inspiration? Ask AI
-                        </span>
-                      </div>
+                {/* AI inspiration at the top */}
+                <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Lucide.Sparkles className="w-4 h-4 text-purple-600" />
+                      <span className="text-xs font-semibold text-purple-700">
+                        AI name inspiration
+                      </span>
                     </div>
-                    <div className="flex gap-2 mb-3">
+                    <div className="inline-flex rounded-full bg-white p-1 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setAiGender("boy")}
+                        className={
+                          "px-3 py-1 rounded-full " +
+                          (aiGender === "boy"
+                            ? "bg-purple-600 text-white"
+                            : "text-purple-600")
+                        }
+                      >
+                        Boy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAiGender("girl")}
+                        className={
+                          "px-3 py-1 rounded-full " +
+                          (aiGender === "girl"
+                            ? "bg-purple-600 text-white"
+                            : "text-purple-600")
+                        }
+                      >
+                        Girl
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-600 mb-2">
+                    Choose a starting letter and we suggest names with their meanings that
+                    work in Arabic and English.
+                  </p>
+
+                  <div className="mb-3">
+                    <div className="text-[11px] text-slate-600 mb-2">
+                      Starting letter (optional)
+                    </div>
+                    <div className="inline-flex gap-2">
+                      {["Z", "K", "H"].map((ltr) => (
+                        <button
+                          key={ltr}
+                          type="button"
+                          onClick={() => setAiLetter(ltr)}
+                          className={
+                            "w-8 h-8 rounded-full border text-xs font-semibold flex items-center justify-center " +
+                            (aiLetter === ltr
+                              ? "bg-purple-600 border-purple-600 text-white"
+                              : "bg-white border-purple-200 text-purple-700")
+                          }
+                        >
+                          {ltr}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    className="w-full border-purple-200 text-purple-700 hover:bg-purple-50 mb-3"
+                    icon={Lucide.Sparkles}
+                    onClick={generateNames}
+                  >
+                    Generate name suggestions
+                  </Button>
+
+                  {aiSuggestions.length > 0 && (
+                    <div className="space-y-2">
+                      {aiSuggestions.map((s, idx) => (
+                        <div
+                          key={idx}
+                          className="w-full bg-white rounded-xl border border-purple-100 px-3 py-2 text-left"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-semibold text-slate-900">
+                                {s.en} / {s.ar}
+                              </div>
+                              <div className="text-[11px] text-purple-600 mb-1">
+                                {aiGender === "boy" ? "Boy" : "Girl"}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                Meaning: {s.meaning}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setName1En(s.en);
+                                  setName1Ar(s.ar);
+                                }}
+                                className="px-2 py-1 rounded-full bg-purple-600 text-white text-[11px] font-semibold"
+                              >
+                                Use for Baby A
+                              </button>
+                              {hasTwins && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setName2En(s.en);
+                                    setName2Ar(s.ar);
+                                  }}
+                                  className="px-2 py-1 rounded-full bg-white border border-purple-300 text-purple-700 text-[11px] font-semibold"
+                                >
+                                  Use for Baby B
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex-grow border-t border-slate-200" />
+                  <span className="text-[11px] text-slate-400 uppercase tracking-[0.18em]">
+                    Or type a name yourself
+                  </span>
+                  <div className="flex-grow border-t border-slate-200" />
+                </div>
+
+                {/* Twins toggle */}
+                <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                  <div className="text-xs text-slate-600">
+                    <div className="font-semibold">Is this a twin birth?</div>
+                    <div>We&apos;ll capture names for both babies.</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHasTwins((prev) => !prev)}
+                    className={
+                      "text-xs font-semibold px-3 py-1 rounded-full border " +
+                      (hasTwins
+                        ? "bg-emerald-600 border-emerald-600 text-white"
+                        : "bg-white border-slate-300 text-slate-700")
+                    }
+                  >
+                    {hasTwins ? "Twins" : "Single baby"}
+                  </button>
+                </div>
+
+                {/* Manual entry for Baby A */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Baby A – first born
+                  </label>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">
+                      Name (English)
+                    </label>
+                    <input
+                      type="text"
+                      value={name1En}
+                      onChange={(e) => setName1En(e.target.value)}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Zayed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">
+                      Name (Arabic)
+                    </label>
+                    <input
+                      type="text"
+                      value={name1Ar}
+                      onChange={(e) => setName1Ar(e.target.value)}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-right"
+                      placeholder="e.g. زايد"
+                    />
+                  </div>
+                </div>
+
+                {/* Manual entry for Baby B (if twins) */}
+                {hasTwins && (
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-slate-700">
+                      Baby B – second born
+                    </label>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">
+                        Name (English)
+                      </label>
                       <input
                         type="text"
-                        value={aiPrompt}
-                        onChange={(e) => setAiPrompt(e.target.value)}
-                        className="flex-1 border border-purple-200 rounded-lg px-3 py-2 text-xs md:text-sm bg-white placeholder:text-slate-400"
-                        placeholder="e.g. Traditional names starting with Z"
+                        value={name2En}
+                        onChange={(e) => setName2En(e.target.value)}
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                        placeholder="e.g. Khalifa"
                       />
-                      <button
-                        type="button"
-                        onClick={generateNames}
-                        className="p-2 rounded-lg bg-purple-600 text-white text-xs flex items-center justify-center hover:bg-purple-700"
-                      >
-                        <Lucide.Wand2 className="w-4 h-4" />
-                      </button>
                     </div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-3 text-[11px]">
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-500">Baby</span>
-                        <div className="inline-flex rounded-full bg-white p-1">
-                          <button
-                            type="button"
-                            onClick={() => setAiGender("boy")}
-                            className={
-                              "px-3 py-1 rounded-full " +
-                              (aiGender === "boy"
-                                ? "bg-purple-600 text-white"
-                                : "text-purple-700")
-                            }
-                          >
-                            Boy
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAiGender("girl")}
-                            className={
-                              "px-3 py-1 rounded-full " +
-                              (aiGender === "girl"
-                                ? "bg-purple-600 text-white"
-                                : "text-purple-700")
-                            }
-                          >
-                            Girl
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-500">First letter</span>
-                        <div className="inline-flex gap-1">
-                          {["Z", "K", "H"].map((ltr) => (
-                            <button
-                              key={ltr}
-                              type="button"
-                              onClick={() => setAiLetter(ltr)}
-                              className={
-                                "w-7 h-7 rounded-full border text-xs font-semibold flex items-center justify-center " +
-                                (aiLetter === ltr
-                                  ? "bg-purple-600 border-purple-600 text-white"
-                                  : "bg-white border-purple-200 text-purple-700")
-                              }
-                            >
-                              {ltr}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      {isTwin && (
-                        <div className="text-[11px] text-slate-500">
-                          AI suggestions will fill:{" "}
-                          <span className="font-semibold text-purple-700">
-                            {activeBabyIndex === 0 ? "Baby 1" : "Baby 2"}
-                          </span>
-                        </div>
-                      )}
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">
+                        Name (Arabic)
+                      </label>
+                      <input
+                        type="text"
+                        value={name2Ar}
+                        onChange={(e) => setName2Ar(e.target.value)}
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-right"
+                        placeholder="e.g. خليفة"
+                      />
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                    <Lucide.Info className="w-3 h-3 text-emerald-600" />
-                    <span>
-                      We will check your chosen name against ICP naming rules before
-                      issuing the certificate.
-                    </span>
-                  </div>
-                </div>
-
-                {/* Single / twins toggle */}
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-700">
-                    This notification is for
-                  </span>
-                  <div className="inline-flex rounded-full bg-slate-100 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setIsTwin(false)}
-                      className={
-                        "px-3 py-1 rounded-full " +
-                        (!isTwin
-                          ? "bg-white shadow text-emerald-700"
-                          : "text-slate-500")
-                      }
-                    >
-                      Single baby
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsTwin(true)}
-                      className={
-                        "px-3 py-1 rounded-full " +
-                        (isTwin
-                          ? "bg-white shadow text-emerald-700"
-                          : "text-slate-500")
-                      }
-                    >
-                      Twins
-                    </button>
-                  </div>
-                </div>
-
-                {/* Baby name cards */}
-                <div className="space-y-4">
-                  {[0, 1].map((index) => {
-                    if (!isTwin && index === 1) return null;
-                    const baby = babyNames[index];
-                    const label = index === 0 ? "Baby 1" : "Baby 2";
-                    const isActive = activeBabyIndex === index;
-
-                    return (
-                      <div
-                        key={index}
-                        className="border border-slate-200 rounded-2xl p-4 bg-white"
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <div className="text-sm font-semibold text-slate-900">
-                              {label}
-                            </div>
-                            {isTwin && (
-                              <div className="text-[11px] text-slate-400">
-                                Twin {index + 1}
-                              </div>
-                            )}
-                          </div>
-                          {isTwin && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveBabyIndex(index)}
-                              className={
-                                "text-[11px] px-2 py-1 rounded-full border " +
-                                (isActive
-                                  ? "border-emerald-600 text-emerald-700 bg-emerald-50"
-                                  : "border-slate-200 text-slate-500")
-                              }
-                            >
-                              {isActive ? "AI will fill here" : "Tap to fill with AI"}
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-xs text-slate-500 mb-1">
-                              First name (English)
-                            </label>
-                            <input
-                              type="text"
-                              value={baby.en}
-                              onChange={(e) =>
-                                updateBabyName(index, "en", e.target.value)
-                              }
-                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                              placeholder="e.g. Zayed"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-slate-500 mb-1">
-                              First name (Arabic)
-                            </label>
-                            <input
-                              type="text"
-                              value={baby.ar}
-                              onChange={(e) =>
-                                updateBabyName(index, "ar", e.target.value)
-                              }
-                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-right"
-                              placeholder="e.g. زايد"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-slate-500 mb-1">
-                              Family name (fixed)
-                            </label>
-                            <input
-                              type="text"
-                              value="Al Nuaimi"
-                              disabled
-                              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* AI suggestions list */}
-                {aiSuggestions.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>
-                        Suggestions for{" "}
-                        {aiGender === "boy" ? "boy" : "girl"} names starting with{" "}
-                        {aiLetter}
-                      </span>
-                      {isTwin && (
-                        <span className="text-[11px] text-slate-400">
-                          Applying to:{" "}
-                          {activeBabyIndex === 0 ? "Baby 1" : "Baby 2"}
-                        </span>
-                      )}
-                    </div>
-                    {aiSuggestions.map((s, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          updateBabyName(activeBabyIndex, "en", s.en);
-                          updateBabyName(activeBabyIndex, "ar", s.ar);
-                        }}
-                        className="w-full text-left bg-white rounded-xl border border-purple-100 px-3 py-2 hover:border-purple-300"
-                      >
-                        <div className="flex items-center justify-between text-sm font-semibold text-slate-900">
-                          <span>
-                            {s.en} / {s.ar}
-                          </span>
-                          <span className="text-[11px] text-purple-600">
-                            {aiGender === "boy" ? "Boy" : "Girl"}
-                          </span>
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          Meaning: {s.meaning}
-                        </div>
-                      </button>
-                    ))}
                   </div>
                 )}
 
@@ -1633,9 +1576,8 @@
                     <div>
                       <div className="font-semibold">Names verified</div>
                       <div>
-                        Arabic and English forms for{" "}
-                        {isTwin ? "both babies" : "the baby"} match ICP naming
-                        rules. No name‑mismatch rejections.
+                        Arabic and English forms match ICP naming rules. No
+                        name‑mismatch rejections.
                       </div>
                     </div>
                   </div>
@@ -1654,7 +1596,7 @@
         );
       }
 
-      // Step 3 – docs auto‑fetched
+      // Step 3 – docs auto‑fetched + optional baby photo override
       if (step === 3) {
         return (
           <Frame>
@@ -1690,6 +1632,64 @@
                 ))}
               </div>
 
+              {/* Passport photo section */}
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-semibold text-slate-600">
+                    Passport photo (newborn)
+                  </div>
+                  <span className="text-[11px] text-emerald-700 font-medium">
+                    {photoStatus === "hospital"
+                      ? "Captured at hospital"
+                      : "Custom photo uploaded"}
+                  </span>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                      <Lucide.Camera className="w-4 h-4" />
+                    </div>
+                    <p className="text-xs text-slate-600">
+                      {photoStatus === "hospital"
+                        ? "A passport‑compliant photo was captured in the hospital."
+                        : "Your uploaded photo passed basic passport checks."}
+                    </p>
+                  </div>
+                </div>
+                {!showPhotoUpload && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotoUpload(true)}
+                    className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Not happy with the photo? Upload a different one
+                  </button>
+                )}
+                {showPhotoUpload && (
+                  <div className="mt-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl p-3 space-y-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Upload a new passport‑style photo
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="block w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700"
+                      onChange={() => setPhotoStatus("uploaded")}
+                    />
+                    <ul className="text-[11px] text-slate-500 list-disc pl-4 space-y-1">
+                      <li>Plain light background</li>
+                      <li>Baby facing camera, eyes open where possible</li>
+                      <li>No hands or blankets covering the face</li>
+                    </ul>
+                    {photoStatus === "uploaded" && (
+                      <p className="text-[11px] text-emerald-700 mt-1">
+                        ✅ Photo looks valid for passport use.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <Button onClick={nextStep} className="w-full">
                 Proceed to bundle
               </Button>
@@ -1698,13 +1698,11 @@
         );
       }
 
-      // Step 4 – bundle + payment (birth cert 100 + extra attestation add‑on)
+      // Step 4 – bundle + payment with MOFA + country attestation options
       if (step === 4) {
-        const baseTotal = 100 + 170 + 55; // 325
-        const grandTotal =
-          baseTotal +
-          (addMofa ? 150 : 0) +
-          (addForeignAttest ? 150 : 0);
+        const baseTotal = 325; // 100 + 170 + 55
+        const foreignFee = addForeignAttest ? 150 : 0;
+        const grandTotal = baseTotal + (addMofa ? 150 : 0) + foreignFee;
 
         return (
           <Frame>
@@ -1713,8 +1711,8 @@
                 Step 4 · Single payment for bundle
               </h1>
               <p className="text-sm text-slate-600 mb-4">
-                One payment covers birth certificate, Emirates ID and passport,
-                with optional MOFA attestation and destination‑country attestation.
+                One payment covers birth certificate, Emirates ID and passport, with
+                optional attestation add‑ons.
               </p>
 
               <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 mb-4">
@@ -1748,7 +1746,7 @@
                 </div>
               </div>
 
-              {/* MOFA auto‑attest */}
+              {/* MOFA attestation */}
               <div
                 onClick={() => setAddMofa(!addMofa)}
                 className={
@@ -1784,7 +1782,7 @@
                 </div>
               </div>
 
-              {/* Destination country attestation */}
+              {/* Attest in chosen country */}
               <div
                 onClick={() => setAddForeignAttest(!addForeignAttest)}
                 className={
@@ -1806,27 +1804,29 @@
                     <Lucide.Check className="w-3 h-3 text-white" />
                   )}
                 </div>
-                <div className="flex-1">
+                <div className="w-full">
                   <div className="text-sm font-semibold text-slate-900">
-                    Attest birth certificate in destination country
+                    Attest certificate in chosen country
                   </div>
                   <p className="text-xs text-slate-600 mt-1">
-                    Digital attestation via UAE mission or approved channel in the
-                    country you select.
+                    Digital attestation of the birth certificate for use in the
+                    country you select (e.g. embassy or consulate).
                   </p>
-                  <div className="mt-2">
-                    <label className="block text-[11px] text-slate-500 mb-1">
-                      Destination country
-                    </label>
-                    <input
-                      type="text"
-                      value={foreignCountry}
-                      onChange={(e) => setForeignCountry(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white placeholder:text-slate-400"
-                      placeholder="e.g. Canada"
-                    />
-                  </div>
+                  {addForeignAttest && (
+                    <div className="mt-2">
+                      <label className="block text-xs text-slate-600 mb-1">
+                        Country for attestation
+                      </label>
+                      <input
+                        type="text"
+                        value={foreignCountry}
+                        onChange={(e) => setForeignCountry(e.target.value)}
+                        placeholder="e.g. Canada, Saudi Arabia"
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
                   <div className="text-xs font-bold text-emerald-700 mt-1">
                     +150.00 AED
                   </div>
@@ -1912,16 +1912,9 @@
                     <div className="flex items-center gap-2">
                       <Lucide.FileCheck className="w-4 h-4 text-emerald-600" />
                       <span>Birth certificate (PDF)</span>
-                      {addMofa && (
-                        <span className="text-[11px] text-emerald-600">
-                          MOFA‑attested
-                        </span>
-                      )}
-                      {addForeignAttest && foreignCountry && (
-                        <span className="text-[11px] text-emerald-600">
-                          · attested in {foreignCountry}
-                        </span>
-                      )}
+                      <span className="text-[11px] text-emerald-600">
+                        MOFA‑attested
+                      </span>
                     </div>
                     <Lucide.Download className="w-4 h-4 text-slate-400" />
                   </div>
